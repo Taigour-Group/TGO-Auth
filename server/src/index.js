@@ -33,6 +33,16 @@ app.get('/health', (req, res) =>
   res.json({ ok: true, service: 'tgo-id', issuer: env.issuer })
 );
 
+app.get('/', (req, res) =>
+  res.json({
+    service: 'tgo-id',
+    message: 'TGO ID identity provider is running',
+    webApp: env.webAppUrl,
+    health: `${env.issuer}/health`,
+    discovery: `${env.issuer}/.well-known/openid-configuration`,
+  })
+);
+
 app.use('/.well-known', wellKnownRoutes);
 app.use('/oauth', oauthRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
