@@ -1,0 +1,23 @@
+{
+  "name": "tgo-id",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TGO ID — root runner that installs, builds, and runs the identity server (:4000) and the account web app (:5173) together.",
+  "engines": {
+    "node": ">=18.11"
+  },
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix web install",
+    "postinstall": "npm run install:all",
+    "dev": "concurrently -k -n server,web -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "npm run build && concurrently -k -n server,web -c blue,magenta \"npm --prefix server run start\" \"npm --prefix web run preview\"",
+    "start:server": "npm --prefix server run start",
+    "start:web": "npm --prefix web run preview"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

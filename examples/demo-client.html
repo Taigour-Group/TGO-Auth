@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo app · Sign in with TGO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17181c;
+        --muted: #62676e;
+        --line: #e6e8eb;
+        --canvas: #f6f7f9;
+        --accent: #2563eb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        width: 100%;
+        max-width: 560px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 10px 30px -12px rgba(16, 24, 40, 0.18);
+        padding: 32px;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+      .brand b { font-weight: 600; letter-spacing: -0.01em; }
+      h1 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 0 0 6px; }
+      p.sub { color: var(--muted); margin: 0 0 22px; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+        height: 46px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--ink);
+        background: var(--ink); color: #fff; font: inherit; font-weight: 500; cursor: pointer;
+        text-decoration: none; transition: background 0.15s;
+      }
+      .btn:hover { background: #000; }
+      .btn.ghost { background: #fff; color: var(--ink); border-color: #d5d8dc; }
+      .btn.ghost:hover { background: var(--canvas); }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+      .kv { margin: 18px 0; }
+      .kv h3 { font-size: 0.8rem; text-transform: none; color: var(--muted); font-weight: 500; margin: 0 0 6px; }
+      pre {
+        background: #0d0f12; color: #e6edf3; border-radius: 10px; padding: 14px 16px; margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+        overflow: auto; line-height: 1.5;
+      }
+      .who { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+      .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 600; }
+      .who .name { font-weight: 600; }
+      .who .email { color: var(--muted); font-size: 0.9rem; }
+      .err { background: #fef3f2; border: 1px solid #f5c9c4; color: #912018; padding: 12px 14px; border-radius: 10px; font-size: 0.9rem; }
+      .note { color: var(--muted); font-size: 0.82rem; margin-top: 18px; }
+      code.inline { background: var(--canvas); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 0.85em; }
+    </style>
+  </head>
+  <body>
+    <div class="card" id="app">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#17181c" />
+          <circle cx="16" cy="13" r="3.6" fill="#fff" />
+          <path d="M14.1 15.2h3.8l1 6.8h-5.8z" fill="#fff" />
+        </svg>
+        <b>Demo app</b>
+      </div>
+      <div id="view">Loading…</div>
+    </div>
+
+    <script>
+      // ------------------------------------------------------------------
+      // Configuration — point these at your running TGO ID server + client.
+      // ------------------------------------------------------------------
+      const ISSUER = 'http://localhost:4000';
+      const CLIENT_ID = 'demo-app';
+      const REDIRECT_URI = window.location.origin + '/demo-client.html';
+      const SCOPE = 'openid profile email';
+
+      const view = document.getElementById('view');
+
+      // ------------------------------ PKCE ------------------------------
+      function b64url(bytes) {
+        return btoa(String.fromCharCode(...new Uint8Array(bytes)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+      }
+      function randomString(len = 48) {
+        const a = new Uint8Array(len);
+        crypto.getRandomValues(a);
+        return b64url(a);
+      }
+      async function sha256Challenge(verifier) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+        return b64url(digest);
+      }
+      function decodeJwt(token) {
+        try {
+          const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          return JSON.parse(decodeURIComponent(escape(atob(part))));
+        } catch {
+          return null;
+        }
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      }
+
+      // -------------------------- start sign-in --------------------------
+      async function startLogin() {
+        const verifier = randomString(48);
+        const state = randomString(16);
+        const nonce = randomString(16);
+        sessionStorage.setItem('tgo_pkce_verifier', verifier);
+        sessionStorage.setItem('tgo_state', state);
+
+        const params = new URLSearchParams({
+          response_type: 'code',
+          client_id: CLIENT_ID,
+          redirect_uri: REDIRECT_URI,
+          scope: SCOPE,
+          state,
+          nonce,
+          code_challenge: await sha256Challenge(verifier),
+          code_challenge_method: 'S256',
+        });
+        window.location.href = `${ISSUER}/oauth/authorize?${params.toString()}`;
+      }
+
+      // ----------------------- exchange code → tokens --------------------
+      async function exchangeCode(code) {
+        const verifier = sessionStorage.getItem('tgo_pkce_verifier');
+        const body = new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: REDIRECT_URI,
+          client_id: CLIENT_ID,
+          code_verifier: verifier || '',
+        });
+        const res = await fetch(`${ISSUER}/oauth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error_description || data.error || 'Token request failed');
+        return data;
+      }
+
+      async function fetchUserinfo(accessToken) {
+        const res = await fetch(`${ISSUER}/oauth/userinfo`, {
+          headers: { Authorization: 'Bearer ' + accessToken },
+        });
+        if (!res.ok) throw new Error('userinfo request failed');
+        return res.json();
+      }
+
+      async function refreshTokens(refreshToken) {
+        const body = new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: CLIENT_ID,
+        });
+        const res = await fetch(`${ISSUER}/oauth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error_description || data.error || 'Refresh failed');
+        return data;
+      }
+
+      // ------------------------------ views ------------------------------
+      function renderSignedOut(errorMsg) {
+        view.innerHTML = `
+          <h1>Sign in to the demo app</h1>
+          <p class="sub">This sample app uses <b>TGO ID</b> for sign-in over OpenID Connect (Authorization Code + PKCE).</p>
+          ${errorMsg ? `<div class="err">${esc(errorMsg)}</div>` : ''}
+          <div class="row">
+            <button class="btn" id="loginBtn">
+              <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#fff"/><circle cx="16" cy="13" r="3.6" fill="#17181c"/><path d="M14.1 15.2h3.8l1 6.8h-5.8z" fill="#17181c"/></svg>
+              Sign in with TGO
+            </button>
+          </div>
+          <p class="note">Server: <code class="inline">${esc(ISSUER)}</code> · client_id: <code class="inline">${esc(CLIENT_ID)}</code></p>`;
+        document.getElementById('loginBtn').addEventListener('click', startLogin);
+      }
+
+      function renderSignedIn(tokens, userinfo) {
+        const claims = decodeJwt(tokens.id_token) || {};
+        const name = userinfo.name || claims.name || userinfo.email || 'Signed in';
+        const initials = (name || '?')
+          .split(' ')
+          .map((s) => s[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase();
+        view.innerHTML = `
+          <h1>You’re signed in</h1>
+          <p class="sub">The demo app received tokens from TGO ID and called the userinfo endpoint.</p>
+          <div class="who">
+            <div class="avatar">${esc(initials)}</div>
+            <div>
+              <div class="name">${esc(name)}</div>
+              <div class="email">${esc(userinfo.email || '')}</div>
+            </div>
+          </div>
+          <div class="kv"><h3>userinfo</h3><pre>${esc(JSON.stringify(userinfo, null, 2))}</pre></div>
+          <div class="kv"><h3>id_token claims</h3><pre>${esc(JSON.stringify(claims, null, 2))}</pre></div>
+          <div class="row">
+            <button class="btn ghost" id="refreshBtn">Refresh tokens</button>
+            <button class="btn ghost" id="startOver">Start over</button>
+          </div>`;
+        document.getElementById('startOver').addEventListener('click', () => {
+          sessionStorage.clear();
+          window.location.href = REDIRECT_URI;
+        });
+        document.getElementById('refreshBtn').addEventListener('click', async () => {
+          try {
+            const next = await refreshTokens(tokens.refresh_token);
+            const info = await fetchUserinfo(next.access_token);
+            renderSignedIn(next, info);
+          } catch (err) {
+            renderSignedOut('Refresh failed: ' + err.message);
+          }
+        });
+      }
+
+      // ------------------------------ boot -------------------------------
+      (async function main() {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+        const error = url.searchParams.get('error');
+
+        if (error) {
+          renderSignedOut('Sign-in was cancelled or failed: ' + error);
+          return;
+        }
+
+        if (code) {
+          // Clean the code/state out of the address bar.
+          window.history.replaceState({}, '', REDIRECT_URI);
+          const expectedState = sessionStorage.getItem('tgo_state');
+          if (!expectedState || state !== expectedState) {
+            renderSignedOut('State mismatch — the sign-in could not be verified. Please try again.');
+            return;
+          }
+          try {
+            const tokens = await exchangeCode(code);
+            const userinfo = await fetchUserinfo(tokens.access_token);
+            renderSignedIn(tokens, userinfo);
+          } catch (err) {
+            renderSignedOut(err.message);
+          }
+          return;
+        }
+
+        renderSignedOut();
+      })();
+    </script>
+  </body>
+</html>
