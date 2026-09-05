@@ -17,6 +17,7 @@ The account UI is where people sign up, sign in, review the consent screen, and 
 ## What it does
 
 - **Accounts** — sign up, sign in, sign out, edit profile, change password. Passwords are hashed with bcrypt; the sign-in session is a signed, httpOnly cookie.
+- **Email verification** — new accounts receive a short-lived six-digit code through T-mail and cannot sign in or authorize apps until the code is verified.
 - **A real OIDC provider** — authorization code flow with PKCE, ID tokens + access tokens (RS256), refresh tokens with rotation, a userinfo endpoint, token revocation, and standard discovery + JWKS documents.
 - **Consent** — apps ask for scopes (`openid`, `profile`, `email`); the user approves on a consent screen before any code is issued.
 - **Developer console** — a built-in web UI inside the account dashboard for registering and managing OAuth client apps: a self-service developer portal where anyone manages their own apps, plus an admin view over every app.
@@ -66,6 +67,7 @@ Edit `.env` and set at least:
   ```bash
   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
   ```
+- `TMAIL_SERVICE_TOKEN` — the private service token configured in T-mail's guide. Keep it server-side only.
 
 Then install and start:
 

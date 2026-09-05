@@ -3,7 +3,19 @@ import { z } from 'zod';
 import { asyncHandler, validate, cookieOptions } from '../middleware.js';
 import { env } from '../env.js';
 import { hashPassword, verifyPassword, randomToken, sha256 } from '../crypto.js';
-import { getUserByEmail, createUser, createSession, deleteSession } from '../supabase.js';
+import {
+  getUserByEmail,
+  createUser,
+  createSession,
+  deleteSession,
+  saveEmailVerificationCode,
+  getEmailVerificationCode,
+  incrementEmailVerificationAttempts,
+  consumeEmailVerificationCode,
+  updateUser,
+} from '../supabase.js';
+import { sendVerificationEmail } from '../email.js';
+import { randomInt } from 'node:crypto';
 
 const router = Router();
 
@@ -27,6 +39,11 @@ const signupSchema = z.object({
 const loginSchema = z.object({
   email: emailField,
   password: z.string().min(1, 'Password is required'),
+});
+
+const verificationSchema = z.object({
+  email: emailField,
+  code: z.string().trim().regex(/^\d{6}$/, 'Enter the six-digit verification code'),
 });
 
 // Shape the user object we are willing to send to the browser (never the hash).
@@ -71,6 +88,18 @@ async function startSession(res, req, userId) {
   res.cookie('tgo_sid', raw, cookieOptions(env.ttl.session * 1000));
 }
 
+async function issueVerificationCode(user) {
+  const code = String(randomInt(100000, 1000000));
+  await saveEmailVerificationCode({
+    user_id: user.id,
+    code_hash: sha256(code),
+    attempts: 0,
+    expires_at: new Date(Date.now() + env.ttl.emailVerification * 1000).toISOString(),
+    consumed: false,
+  });
+  await sendVerificationEmail({ to: user.email, code });
+}
+
 router.post(
   '/signup',
   validate(signupSchema),
@@ -103,8 +132,48 @@ router.post(
       country: d.country || null,
       phone: d.phone || null,
     });
-    await startSession(res, req, user.id);
-    res.status(201).json({ user: publicUser(user) });
+    await issueVerificationCode(user);
+    res.status(201).json({ user: publicUser(user), requiresVerification: true });
+  })
+);
+
+router.post(
+  '/verify-email',
+  validate(verificationSchema),
+  asyncHandler(async (req, res) => {
+    const { email, code } = req.data;
+    const user = await getUserByEmail(email);
+    const record = user && !user.email_verified ? await getEmailVerificationCode(user.id) : null;
+    const valid =
+      record &&
+      !record.consumed &&
+      record.attempts < 5 &&
+      new Date(record.expires_at).getTime() > Date.now() &&
+      record.code_hash === sha256(code);
+
+    if (!valid) {
+      if (record && !record.consumed && record.attempts < 5) {
+        await incrementEmailVerificationAttempts(user.id);
+      }
+      return res.status(400).json({
+        error: 'invalid_verification_code',
+        message: 'That code is invalid or expired.',
+      });
+    }
+
+    await consumeEmailVerificationCode(user.id);
+    const verified = await updateUser(user.id, { email_verified: true });
+    res.json({ user: publicUser(verified), verified: true });
+  })
+);
+
+router.post(
+  '/resend-verification',
+  validate(z.object({ email: emailField })),
+  asyncHandler(async (req, res) => {
+    const user = await getUserByEmail(req.data.email);
+    if (user && !user.email_verified) await issueVerificationCode(user);
+    res.json({ ok: true, message: 'If that account needs verification, a new code has been sent.' });
   })
 );
 
@@ -119,6 +188,12 @@ router.post(
       return res
         .status(401)
         .json({ error: 'invalid_credentials', message: 'Incorrect email or password' });
+    }
+    if (!user.email_verified) {
+      return res.status(403).json({
+        error: 'email_not_verified',
+        message: 'Verify your email before signing in.',
+      });
     }
     await startSession(res, req, user.id);
     res.json({ user: publicUser(user) });

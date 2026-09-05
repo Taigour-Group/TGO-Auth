@@ -30,6 +30,8 @@ export const env = {
   supabaseServiceKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   sessionSecret: process.env.SESSION_SECRET || 'dev-insecure-session-secret-change-me',
   oidcPrivateKey: process.env.OIDC_PRIVATE_KEY || '',
+  tmailServiceUrl: (process.env.TMAIL_SERVICE_URL || 'https://mail-tgo1.onrender.com/api/system/send').replace(/\/+$/, ''),
+  tmailServiceToken: process.env.TMAIL_SERVICE_TOKEN || '',
   allowedEmailDomains: list('ALLOWED_EMAIL_DOMAINS').map((d) => d.toLowerCase()),
   // Every account must use this email domain (like Gmail forcing @gmail.com).
   // The signup UI shows it as a fixed, non-editable suffix.
@@ -43,5 +45,6 @@ export const env = {
     refresh: num('REFRESH_TOKEN_TTL', 2592000),
     code: num('AUTH_CODE_TTL', 60),
     session: num('SESSION_TTL', 1209600),
+    emailVerification: num('EMAIL_VERIFICATION_TTL', 600),
   },
 };

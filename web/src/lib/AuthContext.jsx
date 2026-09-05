@@ -32,7 +32,6 @@ export function AuthProvider({ children }) {
 
   const signup = useCallback(async (payload) => {
     const { user } = await api.post('/api/auth/signup', payload);
-    setUser(user);
     return user;
   }, []);
 

@@ -75,7 +75,9 @@ export default function SignUp() {
       if (f.country.trim()) payload.country = f.country.trim();
       if (f.phone.trim()) payload.phone = f.phone.trim();
       await signup(payload);
-      continueAfterAuth(returnTo, navigate);
+      const params = new URLSearchParams({ email: payload.email });
+      if (returnTo) params.set('returnTo', returnTo);
+      navigate('/verify-email?' + params.toString());
     } catch (err) {
       setSubmitting(false);
       if (err.code === 'email_taken') {

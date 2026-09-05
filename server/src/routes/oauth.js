@@ -141,6 +141,13 @@ router.get(
       return res.redirect(`${env.webAppUrl}/login?return_to=${returnTo}`);
     }
 
+    if (!req.user.email_verified) {
+      const returnTo = encodeURIComponent(`${env.issuer}/oauth/authorize?${qs}`);
+      return res.redirect(
+        `${env.webAppUrl}/verify-email?email=${encodeURIComponent(req.user.email)}&returnTo=${returnTo}`
+      );
+    }
+
     // Signed in → show the consent screen (rendered by the web app).
     return res.redirect(`${env.webAppUrl}/consent?${qs}`);
   })
@@ -171,6 +178,12 @@ router.post(
   '/decision',
   requireAuth,
   asyncHandler(async (req, res) => {
+    if (!req.user.email_verified) {
+      return res.status(403).json({
+        error: 'email_not_verified',
+        message: 'Verify your email before approving an application.',
+      });
+    }
     const {
       approve,
       client_id,
@@ -249,6 +262,12 @@ router.post(
 );
 
 async function issueTokens(res, { user, client, scope, nonce }) {
+  if (!user.email_verified) {
+    return res.status(403).json({
+      error: 'email_not_verified',
+      error_description: 'Email verification is required.',
+    });
+  }
   const idToken = await signIdToken({
     sub: user.id,
     aud: client.client_id,

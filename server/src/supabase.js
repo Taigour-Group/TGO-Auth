@@ -41,6 +41,53 @@ export async function updateUser(id, patch) {
   return data;
 }
 
+/* ---------------------- Email verification ----------------------- */
+export async function saveEmailVerificationCode(row) {
+  const { data, error } = await supabase
+    .from('email_verification_codes')
+    .upsert(row, { onConflict: 'user_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getEmailVerificationCode(userId) {
+  const { data, error } = await supabase
+    .from('email_verification_codes')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function incrementEmailVerificationAttempts(userId) {
+  const code = await getEmailVerificationCode(userId);
+  if (!code) return null;
+  const { data, error } = await supabase
+    .from('email_verification_codes')
+    .update({ attempts: code.attempts + 1 })
+    .eq('user_id', userId)
+    .eq('consumed', false)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function consumeEmailVerificationCode(userId) {
+  const { data, error } = await supabase
+    .from('email_verification_codes')
+    .update({ consumed: true })
+    .eq('user_id', userId)
+    .eq('consumed', false)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /* -------------------------- OAuth clients ------------------------- */
 export async function getClient(clientId) {
   const { data, error } = await supabase
