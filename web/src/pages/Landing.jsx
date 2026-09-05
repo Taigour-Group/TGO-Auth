@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { Logo, Button, IconShield, IconKey, IconGrid } from '../components/ui.jsx';
@@ -23,33 +24,57 @@ const FEATURES = [
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function go(path) {
+    setMenuOpen(false);
+    navigate(path);
+  }
+
+  const actions = user ? (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => go('/guide')}>
+        Developer guide
+      </Button>
+      <Button variant="primary" size="sm" onClick={() => go('/dashboard')}>
+        Go to your account
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => go('/guide')}>
+        Developer guide
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => go('/login')}>
+        Sign in
+      </Button>
+      <Button variant="primary" size="sm" onClick={() => go('/signup')}>
+        Create account
+      </Button>
+    </>
+  );
 
   return (
     <div>
-      <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-canvas/80 px-6 py-4 backdrop-blur-md backdrop-saturate-150">
+      <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-canvas/80 px-4 py-3 backdrop-blur-md backdrop-saturate-150 sm:px-6 sm:py-4">
         <Logo />
-        <div className="flex items-center gap-2.5">
-          {loading ? null : user ? (
-            <div className="flex items-center gap-2.5">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/guide')}>
-                Developer guide
-              </Button>
-              <Button variant="primary" size="sm" onClick={() => navigate('/dashboard')}>
-                Go to your account
-              </Button>
+        <div className="hidden items-center gap-2.5 sm:flex">{loading ? null : actions}</div>
+        <div className="relative sm:hidden">
+          <button
+            type="button"
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+            className="grid h-10 w-10 place-items-center rounded-lg border border-line-strong bg-surface text-ink transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {menuOpen ? <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></> : <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>}
+            </svg>
+          </button>
+          {menuOpen && !loading && (
+            <div className="absolute right-0 top-12 z-30 flex w-52 flex-col gap-1 rounded-xl2 border border-line bg-surface p-2 shadow-card">
+              {actions}
             </div>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/guide')}>
-                Developer guide
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-                Sign in
-              </Button>
-              <Button variant="primary" size="sm" onClick={() => navigate('/signup')}>
-                Create account
-              </Button>
-            </>
           )}
         </div>
       </nav>
