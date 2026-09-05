@@ -182,23 +182,16 @@ tgo-id/
 
 ## Deploying to Render
 
-Deploy `server/` as a **Web Service** and `web/` as a **Static Site**. The API does not serve the React UI, so opening the API URL at `/` only shows its service status.
+The root project can be deployed as one **Web Service**. The Express server serves the built React UI at `/` and keeps the API and OIDC endpoints available under their existing paths.
 
 ### API Web Service
 
-- Root directory: `server`
-- Build command: `npm install`
+- Root directory: repository root
+- Build command: `npm install && npm run build`
 - Start command: `npm start`
 - Add the environment variables from `server/.env.example`.
 - Let Render provide `PORT` automatically.
 - Set `ISSUER` to the public API URL and `WEB_APP_URL` to the public Static Site URL.
 - Set `CORS_ORIGINS` to the Static Site URL.
 
-### Account UI Static Site
-
-- Root directory: `web`
-- Build command: `npm install && npm run build`
-- Publish directory: `dist`
-- Add `VITE_API_URL` with the public API Web Service URL, for example `https://tgo-auth2-0.onrender.com`.
-
-Set the API URL used by the web app in `web/src/lib/config.js` before building. Both services must use HTTPS in production. Use the API URL's `/health` endpoint to verify the Web Service is running.
+The build creates `web/dist`, which the API serves from the same origin. Leave `VITE_API_URL` unset for this single-service deployment so browser requests stay same-origin. Both the API URL and the UI use the same HTTPS Render URL. Use the URL's `/health` endpoint to verify the service is running.

@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -12,6 +14,8 @@ import wellKnownRoutes from './routes/wellknown.js';
 
 const app = express();
 app.set('trust proxy', 1);
+
+const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 app.use(
@@ -33,21 +37,21 @@ app.get('/health', (req, res) =>
   res.json({ ok: true, service: 'tgo-id', issuer: env.issuer })
 );
 
-app.get('/', (req, res) =>
-  res.json({
-    service: 'tgo-id',
-    message: 'TGO ID identity provider is running',
-    webApp: env.webAppUrl,
-    health: `${env.issuer}/health`,
-    discovery: `${env.issuer}/.well-known/openid-configuration`,
-  })
-);
+app.use(express.static(webDist));
 
 app.use('/.well-known', wellKnownRoutes);
 app.use('/oauth', oauthRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/apps', appRoutes);
+
+// Let the React router handle browser routes when the built UI is present.
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/oauth/')) return next();
+  res.sendFile(path.join(webDist, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
 
 app.use(notFound);
 app.use(errorHandler);
