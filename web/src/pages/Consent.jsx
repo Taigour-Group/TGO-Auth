@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { api } from '../lib/api.js';
+import { apiUrl } from '../lib/config.js';
 import AuthLayout from '../components/AuthLayout.jsx';
 import { Button, Alert, Spinner, IconCheck } from '../components/ui.jsx';
 
@@ -33,7 +34,7 @@ export default function Consent() {
   // and then return here once a session exists.
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = '/oauth/authorize?' + sp.toString();
+      window.location.href = apiUrl('/oauth/authorize?' + sp.toString());
     }
   }, [loading, user, sp]);
 

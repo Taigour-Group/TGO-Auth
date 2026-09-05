@@ -199,5 +199,6 @@ Deploy `server/` as a **Web Service** and `web/` as a **Static Site**. The API d
 - Root directory: `web`
 - Build command: `npm install && npm run build`
 - Publish directory: `dist`
+- Add `VITE_API_URL` with the public API Web Service URL, for example `https://tgo-auth2-0.onrender.com`.
 
 Set the API URL used by the web app in `web/src/lib/config.js` before building. Both services must use HTTPS in production. Use the API URL's `/health` endpoint to verify the Web Service is running.

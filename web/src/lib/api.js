@@ -1,8 +1,8 @@
-// Tiny fetch wrapper. All requests are same-origin (Vite proxies /api, /oauth
-// to the identity server), and we always send the SSO cookie.
+// Tiny fetch wrapper. Vite proxies these paths locally; production uses the API origin.
+import { apiUrl } from './config.js';
 
 async function request(path, { method = 'GET', body, headers } = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method,
     credentials: 'include',
     headers: {
