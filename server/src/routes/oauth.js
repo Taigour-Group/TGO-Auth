@@ -43,6 +43,10 @@ function claimsForScopes(user, scope) {
   return c;
 }
 
+function isTmailClient(client) {
+  return client.client_id === env.tmailClientId;
+}
+
 function redirectWith(base, params) {
   const url = new URL(base);
   for (const [k, v] of Object.entries(params)) {
@@ -141,7 +145,7 @@ router.get(
       return res.redirect(`${env.webAppUrl}/login?return_to=${returnTo}`);
     }
 
-    if (!req.user.email_verified) {
+    if (!req.user.email_verified && !isTmailClient(client)) {
       const returnTo = encodeURIComponent(`${env.issuer}/oauth/authorize?${qs}`);
       return res.redirect(
         `${env.webAppUrl}/verify-email?email=${encodeURIComponent(req.user.email)}&returnTo=${returnTo}`
@@ -178,12 +182,6 @@ router.post(
   '/decision',
   requireAuth,
   asyncHandler(async (req, res) => {
-    if (!req.user.email_verified) {
-      return res.status(403).json({
-        error: 'email_not_verified',
-        message: 'Verify your email before approving an application.',
-      });
-    }
     const {
       approve,
       client_id,
@@ -197,6 +195,12 @@ router.post(
 
     const client = await getClient(String(client_id || ''));
     if (!client) return res.status(400).json({ error: 'invalid_client' });
+    if (!req.user.email_verified && !isTmailClient(client)) {
+      return res.status(403).json({
+        error: 'email_not_verified',
+        message: 'Verify your email before approving an application.',
+      });
+    }
     if (!isRegisteredRedirect(client, String(redirect_uri))) {
       return res
         .status(400)
@@ -262,7 +266,7 @@ router.post(
 );
 
 async function issueTokens(res, { user, client, scope, nonce }) {
-  if (!user.email_verified) {
+  if (!user.email_verified && !isTmailClient(client)) {
     return res.status(403).json({
       error: 'email_not_verified',
       error_description: 'Email verification is required.',

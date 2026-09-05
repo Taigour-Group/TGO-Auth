@@ -189,12 +189,6 @@ router.post(
         .status(401)
         .json({ error: 'invalid_credentials', message: 'Incorrect email or password' });
     }
-    if (!user.email_verified) {
-      return res.status(403).json({
-        error: 'email_not_verified',
-        message: 'Verify your email before signing in.',
-      });
-    }
     await startSession(res, req, user.id);
     res.json({ user: publicUser(user) });
   })

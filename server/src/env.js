@@ -32,6 +32,7 @@ export const env = {
   oidcPrivateKey: process.env.OIDC_PRIVATE_KEY || '',
   tmailServiceUrl: (process.env.TMAIL_SERVICE_URL || 'https://mail-tgo1.onrender.com/api/system/send').replace(/\/+$/, ''),
   tmailServiceToken: process.env.TMAIL_SERVICE_TOKEN || '',
+  tmailClientId: process.env.TMAIL_CLIENT_ID || 'app_d3ed55c8f10d',
   allowedEmailDomains: list('ALLOWED_EMAIL_DOMAINS').map((d) => d.toLowerCase()),
   // Every account must use this email domain (like Gmail forcing @gmail.com).
   // The signup UI shows it as a fixed, non-editable suffix.
