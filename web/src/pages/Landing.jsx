@@ -30,11 +30,19 @@ export default function Landing() {
         <Logo />
         <div className="flex items-center gap-2.5">
           {loading ? null : user ? (
-            <Button variant="primary" size="sm" onClick={() => navigate('/dashboard')}>
-              Go to your account
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/guide')}>
+                Developer guide
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => navigate('/dashboard')}>
+                Go to your account
+              </Button>
+            </div>
           ) : (
             <>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/guide')}>
+                Developer guide
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
                 Sign in
               </Button>
