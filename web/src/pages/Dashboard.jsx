@@ -53,6 +53,9 @@ function fmtDate(value) {
 
 /* ------------------------------ Overview ------------------------------ */
 function Overview({ user }) {
+  const navigate = useNavigate();
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verificationError, setVerificationError] = useState(null);
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || '—';
   const stats = [
     { k: 'Name', v: fullName },
@@ -85,9 +88,30 @@ function Overview({ user }) {
             Verified
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-0.5 text-xs font-medium text-ink-muted">
-            Not verified
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-0.5 text-xs font-medium text-ink-muted">
+              Not verified
+            </span>
+            <Button
+              size="sm"
+              variant="primary"
+              loading={sendingCode}
+              onClick={async () => {
+                setSendingCode(true);
+                setVerificationError(null);
+                try {
+                  await api.post('/api/auth/resend-verification', { email: user.email });
+                  navigate('/verify-email?email=' + encodeURIComponent(user.email));
+                } catch (err) {
+                  setVerificationError(err.message || 'Could not send a verification code.');
+                  setSendingCode(false);
+                }
+              }}
+            >
+              Verify email
+            </Button>
+            {verificationError && <Alert kind="error">{verificationError}</Alert>}
+          </div>
         )}
       </div>
     </div>
