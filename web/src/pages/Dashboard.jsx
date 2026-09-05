@@ -304,6 +304,7 @@ export default function Dashboard() {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [section, setSection] = useState('overview');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const nav = user.isAdmin
     ? [...BASE_NAV, { id: 'admin', label: 'Admin', icon: IconShield }]
@@ -312,6 +313,11 @@ export default function Dashboard() {
   async function handleSignOut() {
     await logout();
     navigate('/', { replace: true });
+  }
+
+  function selectSection(id) {
+    setSection(id);
+    setMobileNavOpen(false);
   }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
@@ -323,12 +329,12 @@ export default function Dashboard() {
         <div className="hidden px-2.5 py-4 md:block">
           <Logo />
         </div>
-        <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-0">
+        <nav className="hidden gap-1 p-2 md:flex md:flex-col md:p-0">
           {nav.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
-              onClick={() => setSection(id)}
+              onClick={() => selectSection(id)}
               className={'nav-item' + (section === id ? ' nav-item-active' : '')}
               aria-current={section === id ? 'page' : undefined}
             >
@@ -337,6 +343,41 @@ export default function Dashboard() {
             </button>
           ))}
         </nav>
+        <div className="relative flex items-center px-3 py-2 md:hidden">
+          <button
+            type="button"
+            aria-expanded={mobileNavOpen}
+            aria-haspopup="menu"
+            onClick={() => setMobileNavOpen((open) => !open)}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-ink hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
+          >
+            {(() => {
+              const active = nav.find(({ id }) => id === section) || nav[0];
+              const Icon = active.icon;
+              return <><Icon /><span className="truncate">{active.label}</span></>;
+            })()}
+            <svg className="ml-auto h-4 w-4 flex-none text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          {mobileNavOpen && (
+            <div className="absolute left-3 right-3 top-12 z-30 rounded-xl2 border border-line bg-surface p-2 shadow-card" role="menu">
+              {nav.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => selectSection(id)}
+                  className={'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium ' +
+                    (section === id ? 'bg-ink/5 text-ink' : 'text-ink-muted hover:bg-surface-2 hover:text-ink')}
+                >
+                  <Icon />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* main */}
