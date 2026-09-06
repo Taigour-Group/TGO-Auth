@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { Logo, Button, IconShield, IconKey, IconGrid } from '../components/ui.jsx';
+import { BRAND } from '../lib/brand.js';
 
 const FEATURES = [
   {

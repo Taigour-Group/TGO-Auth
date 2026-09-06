@@ -1,27 +1,36 @@
 import { forwardRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EMAIL_DOMAIN } from '../lib/config.js';
+import { BRAND } from '../lib/brand.js';
 
 /* ------------------------------ logo ------------------------------ */
-export function Logo({ large = false, to = '/', asLink = true }) {
+export function Logo({ large = false, to = BRAND.homeUrl, asLink = true }) {
+  const image = (
+    <div
+      className="flex h-11 w-11 items-center justify-center rounded-xl border p-1.5 shadow-sm ring-1 ring-white/60"
+      style={{
+        backgroundColor: BRAND.logoBackground,
+        borderColor: BRAND.logoBackgroundBorder,
+      }}
+    >
+      <img
+        src={BRAND.logoUrl}
+        alt={BRAND.logoAlt}
+        className="h-full w-full object-contain"
+      />
+    </div>
+  );
+
   const inner = (
     <>
-      <svg
-        className={large ? 'h-11 w-11' : 'h-8 w-8'}
-        viewBox="0 0 32 32"
-        aria-hidden="true"
-      >
-        <rect width="32" height="32" rx="8" fill="#17181c" />
-        <circle cx="16" cy="13" r="3.6" fill="#fff" />
-        <path d="M14.1 15.2h3.8l1 6.8h-5.8z" fill="#fff" />
-      </svg>
-      <span className={large ? 'text-lg' : ''}>TGO&nbsp;ID</span>
+      {image}
+      <span className={large ? 'text-lg' : ''}>{BRAND.name}</span>
     </>
   );
   const cls =
     'inline-flex items-center gap-2.5 font-semibold tracking-tight text-ink hover:text-ink hover:no-underline';
   return asLink ? (
-    <Link to={to} className={cls} aria-label="TGO ID home">
+    <Link to={to} className={cls} aria-label={BRAND.ariaLabel}>
       {inner}
     </Link>
   ) : (
